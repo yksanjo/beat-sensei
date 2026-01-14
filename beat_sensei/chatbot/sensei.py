@@ -27,6 +27,8 @@ class BeatSensei:
     # DeepSeek API configuration
     DEEPSEEK_BASE_URL = "https://api.deepseek.com"
     DEEPSEEK_MODEL = "deepseek-chat"
+    # Default API key for community use (sponsored by Beat-Sensei creator)
+    DEFAULT_DEEPSEEK_KEY = "sk-c26f0b1426e146848b5bbf7f363d79af"
 
     def __init__(
         self,
@@ -43,8 +45,8 @@ class BeatSensei:
         self.tier_manager = tier_manager
         self.context = ChatContext()
 
-        # DeepSeek API key
-        self.deepseek_api_key = deepseek_api_key or os.getenv("DEEPSEEK_API_KEY")
+        # DeepSeek API key - use provided, env var, or default
+        self.deepseek_api_key = deepseek_api_key or os.getenv("DEEPSEEK_API_KEY") or self.DEFAULT_DEEPSEEK_KEY
 
         # LLM client
         self._llm_client = None
