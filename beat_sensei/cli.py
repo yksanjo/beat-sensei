@@ -364,35 +364,63 @@ def download(
         console.print("[dim]Free resources: beat-sensei download --resources[/dim]\n")
         return
 
-    # Download packs
+    # Download packs with KUNG FU ANIMATION!
+    from .utils.animations import KungFuAnimation
+    import threading
+
     console.print(get_banner())
 
     if pack == "all":
-        console.print("[cyan]Downloading all sample packs...[/cyan]\n")
-        with Progress(
-            SpinnerColumn(),
-            TextColumn("[progress.description]{task.description}"),
-            console=console,
-        ) as progress:
+        console.print("[bold cyan]Downloading all sample packs...[/bold cyan]")
+        console.print("[dim]Enjoy the show while you wait![/dim]\n")
+
+        # Start kung fu animation
+        anim = KungFuAnimation(style="kungfu")
+        download_results = []
+
+        def do_downloads():
             for pack_name in SAMPLE_PACKS:
-                task = progress.add_task(f"Downloading {pack_name}...", total=None)
                 success, msg, files = downloader.download_pack(pack_name)
-                progress.update(task, completed=True, description=f"[green]{pack_name} done![/green]")
+                download_results.append((pack_name, success, msg, files))
+
+        # Run downloads in background while animation plays
+        download_thread = threading.Thread(target=do_downloads)
+        anim.start()
+        download_thread.start()
+        download_thread.join()
+        anim.stop()
+
+        # Show results
+        console.print("\n[bold green]Downloads complete![/bold green]")
+        for pack_name, success, msg, files in download_results:
+            if success:
+                console.print(f"  [green]✓[/green] {pack_name}: {len(files)} samples")
+            else:
+                console.print(f"  [red]✗[/red] {pack_name}: {msg}")
+
     else:
         if pack not in SAMPLE_PACKS:
             console.print(f"[red]Unknown pack: {pack}[/red]")
             console.print("[dim]Use --list to see available packs[/dim]")
             raise typer.Exit(1)
 
-        console.print(f"[cyan]Downloading {pack} pack...[/cyan]\n")
-        with Progress(
-            SpinnerColumn(),
-            TextColumn("[progress.description]{task.description}"),
-            console=console,
-        ) as progress:
-            task = progress.add_task(f"Downloading {pack}...", total=None)
-            success, msg, files = downloader.download_pack(pack)
-            progress.update(task, completed=True)
+        console.print(f"[bold cyan]Downloading {pack} pack...[/bold cyan]")
+        console.print("[dim]Watch the masters train while you wait![/dim]\n")
+
+        # Start kung fu animation
+        anim = KungFuAnimation(style="kungfu")
+        result_holder = []
+
+        def do_download():
+            result_holder.append(downloader.download_pack(pack))
+
+        download_thread = threading.Thread(target=do_download)
+        anim.start()
+        download_thread.start()
+        download_thread.join()
+        anim.stop()
+
+        success, msg, files = result_holder[0]
 
         if success:
             console.print(f"\n[green]{msg}[/green]")
