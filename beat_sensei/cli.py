@@ -112,6 +112,7 @@ def create_sensei(config: Config) -> BeatSensei:
         scanner=scanner,
         tier_manager=tier_manager,
         api_key=config.replicate_api_token,
+        deepseek_api_key=config.deepseek_api_key,
     )
 
 

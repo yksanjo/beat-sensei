@@ -14,6 +14,7 @@ class Config:
     output_folder: str = ""
     replicate_api_token: Optional[str] = None
     openai_api_key: Optional[str] = None
+    deepseek_api_key: Optional[str] = None
     default_bpm: int = 90
     audio_format: str = "wav"
     tier: str = "free"
@@ -41,6 +42,7 @@ class Config:
         # Override with environment variables
         config.replicate_api_token = os.getenv('REPLICATE_API_TOKEN')
         config.openai_api_key = os.getenv('OPENAI_API_KEY')
+        config.deepseek_api_key = os.getenv('DEEPSEEK_API_KEY')
 
         # Expand paths
         config.sample_folders = [os.path.expanduser(f) for f in config.sample_folders]

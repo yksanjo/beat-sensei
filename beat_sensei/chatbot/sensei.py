@@ -24,11 +24,16 @@ class ChatContext:
 class BeatSensei:
     """Main chatbot orchestrator that handles conversation and actions."""
 
+    # DeepSeek API configuration
+    DEEPSEEK_BASE_URL = "https://api.deepseek.com"
+    DEEPSEEK_MODEL = "deepseek-chat"
+
     def __init__(
         self,
         scanner: SampleScanner,
         tier_manager: TierManager,
         api_key: Optional[str] = None,
+        deepseek_api_key: Optional[str] = None,
     ):
         self.personality = SenseiPersonality()
         self.scanner = scanner
@@ -38,18 +43,30 @@ class BeatSensei:
         self.tier_manager = tier_manager
         self.context = ChatContext()
 
+        # DeepSeek API key
+        self.deepseek_api_key = deepseek_api_key or os.getenv("DEEPSEEK_API_KEY")
+
         # LLM client
-        self._openai_client = None
+        self._llm_client = None
 
     def _get_llm_client(self):
-        """Get or create OpenAI client."""
-        if self._openai_client is None:
+        """Get or create DeepSeek client (OpenAI-compatible)."""
+        if self._llm_client is None:
             try:
                 from openai import OpenAI
-                self._openai_client = OpenAI()
+
+                if self.deepseek_api_key:
+                    # Use DeepSeek
+                    self._llm_client = OpenAI(
+                        api_key=self.deepseek_api_key,
+                        base_url=self.DEEPSEEK_BASE_URL,
+                    )
+                elif os.getenv("OPENAI_API_KEY"):
+                    # Fallback to OpenAI
+                    self._llm_client = OpenAI()
             except ImportError:
                 pass
-        return self._openai_client
+        return self._llm_client
 
     def chat(self, user_message: str) -> Tuple[str, Optional[dict]]:
         """Process a user message and return response with any actions."""
@@ -233,8 +250,11 @@ Remember to output actions in [ACTION:TYPE:params] format when needed.
 """
 
         try:
+            # Use DeepSeek model if using DeepSeek, else GPT-4o-mini
+            model = self.DEEPSEEK_MODEL if self.deepseek_api_key else "gpt-4o-mini"
+
             response = client.chat.completions.create(
-                model="gpt-4o-mini",
+                model=model,
                 messages=[
                     {"role": "system", "content": system_context},
                     {"role": "user", "content": message}
