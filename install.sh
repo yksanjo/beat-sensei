@@ -1,0 +1,86 @@
+#!/bin/bash
+# Beat-Sensei Installer
+# One-liner: curl -fsSL https://raw.githubusercontent.com/yksanjo/beat-sensei/main/install.sh | bash
+
+set -e
+
+echo ""
+echo "  ____  _____    _  _____   ____  _____ _   _ ____  _____ ___ "
+echo " | __ )| ____|  / \|_   _| / ___|| ____| \ | / ___|| ____|_ _|"
+echo " |  _ \|  _|   / _ \ | |   \___ \|  _| |  \| \___ \|  _|  | | "
+echo " | |_) | |___ / ___ \| |    ___) | |___| |\  |___) | |___ | | "
+echo " |____/|_____/_/   \_\_|   |____/|_____|_| \_|____/|_____|___|"
+echo ""
+echo " Your AI Sample Master - Hip-Hop Edition"
+echo " ========================================="
+echo ""
+
+# Check for Python
+if ! command -v python3 &> /dev/null; then
+    echo "Error: Python 3 is required but not installed."
+    echo "Install Python from https://python.org or via homebrew: brew install python"
+    exit 1
+fi
+
+# Check Python version
+PYTHON_VERSION=$(python3 -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')
+echo "Found Python $PYTHON_VERSION"
+
+# Set install directory
+INSTALL_DIR="${HOME}/.beat-sensei"
+
+# Clone or update repository
+if [ -d "$INSTALL_DIR" ]; then
+    echo "Updating existing installation..."
+    cd "$INSTALL_DIR"
+    git pull origin main
+else
+    echo "Installing Beat-Sensei..."
+    git clone https://github.com/yksanjo/beat-sensei.git "$INSTALL_DIR"
+    cd "$INSTALL_DIR"
+fi
+
+# Create virtual environment
+echo "Setting up virtual environment..."
+python3 -m venv venv
+source venv/bin/activate
+
+# Install dependencies
+echo "Installing dependencies..."
+pip install --upgrade pip -q
+pip install -e . -q
+
+# Create symlink for easy access
+BEAT_SENSEI_BIN="${HOME}/.local/bin/beat-sensei"
+mkdir -p "${HOME}/.local/bin"
+
+cat > "$BEAT_SENSEI_BIN" << 'WRAPPER'
+#!/bin/bash
+source "${HOME}/.beat-sensei/venv/bin/activate"
+python -m beat_sensei.cli "$@"
+WRAPPER
+
+chmod +x "$BEAT_SENSEI_BIN"
+
+# Check if ~/.local/bin is in PATH
+if [[ ":$PATH:" != *":${HOME}/.local/bin:"* ]]; then
+    echo ""
+    echo "Add this to your shell profile (~/.zshrc or ~/.bashrc):"
+    echo ""
+    echo '  export PATH="$HOME/.local/bin:$PATH"'
+    echo ""
+    echo "Then restart your terminal or run: source ~/.zshrc"
+fi
+
+echo ""
+echo "Installation complete!"
+echo ""
+echo "Quick Start:"
+echo "  1. Scan your sample folder:  beat-sensei scan ~/Music/Samples"
+echo "  2. Start chatting:           beat-sensei"
+echo ""
+echo "For AI generation (Pro), set your API key:"
+echo "  export REPLICATE_API_TOKEN=your_token_here"
+echo ""
+echo "Let's make some heat!"
+echo ""

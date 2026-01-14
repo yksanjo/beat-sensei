@@ -1,5 +1,8 @@
 # Beat-Sensei
 
+[![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 Your AI Sample Master - A terminal chatbot for beat production.
 
 ```
@@ -11,6 +14,17 @@ Your AI Sample Master - A terminal chatbot for beat production.
 ```
 
 Beat-Sensei is a hip-hop producer mentor chatbot that helps you discover samples from your local library and generate new ones using AI.
+
+## One-Line Install
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/yksanjo/beat-sensei/main/install.sh | bash
+```
+
+Or with pip:
+```bash
+pip install git+https://github.com/yksanjo/beat-sensei.git
+```
 
 ## Features
 
