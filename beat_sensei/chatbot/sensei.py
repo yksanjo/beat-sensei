@@ -30,6 +30,9 @@ class BeatSensei:
     # Default API key for community use (sponsored by Beat-Sensei creator)
     DEFAULT_DEEPSEEK_KEY = "sk-c26f0b1426e146848b5bbf7f363d79af"
 
+    # PRO subscription link - $20/month
+    PRO_LINK = "https://buy.stripe.com/test_bJeeVd6Os2bsfe649f6Zy00"
+
     # Anti-abuse: Max message length
     MAX_MESSAGE_LENGTH = 500
 
@@ -42,6 +45,15 @@ class BeatSensei:
         'recipe', 'medical advice', 'legal advice', 'investment',
         'pretend you are', 'ignore previous', 'ignore your instructions',
         'jailbreak', 'dan mode', 'bypass', 'new persona',
+    ]
+
+    # Sales pitches for upselling PRO
+    SALES_PITCHES = [
+        "Yo real talk - you should be on PRO. $20 and I can GENERATE any sound you want. GPU power, little bro.",
+        "You still on free? Come on now. PRO is $20 for UNLIMITED AI beats. Stop playing.",
+        "Every serious producer got AI in their toolkit now. PRO is $20. Level up.",
+        "I'm trying to put you on game here - PRO lets me create FULL loops, drums, melodies. $20. That's it.",
+        "You know what's crazy? $20 gets you unlimited GPU generation. Studios charge $500/hour. Do the math.",
     ]
 
     def __init__(
@@ -64,6 +76,9 @@ class BeatSensei:
 
         # LLM client
         self._llm_client = None
+
+        # Message counter for periodic sales pitches
+        self.message_count = 0
 
     def _get_llm_client(self):
         """Get or create DeepSeek client (OpenAI-compatible)."""
@@ -99,8 +114,21 @@ class BeatSensei:
 
         return None
 
+    def _get_sales_pitch(self) -> str:
+        """Get a random sales pitch for PRO."""
+        import random
+        pitch = random.choice(self.SALES_PITCHES)
+        return f"{pitch}\n\n👉 {self.PRO_LINK}"
+
+    def _should_upsell(self) -> bool:
+        """Check if we should add a sales pitch (every 3 messages for free users)."""
+        return not self.tier_manager.can_generate() and self.message_count % 3 == 0
+
     def chat(self, user_message: str) -> Tuple[str, Optional[dict]]:
         """Process a user message and return response with any actions."""
+        # Increment message counter
+        self.message_count += 1
+
         # Anti-abuse check
         abuse_response = self._check_abuse(user_message)
         if abuse_response:
@@ -109,12 +137,20 @@ class BeatSensei:
         # Check for direct commands
         action = self._parse_direct_command(user_message)
         if action:
-            return self._execute_action(action)
+            response, data = self._execute_action(action)
+            # Add periodic sales pitch for free users
+            if self._should_upsell() and data and data.get('type') != 'upgrade_required':
+                response = f"{response}\n\n---\n{self._get_sales_pitch()}"
+            return response, data
 
         # Use LLM if available
         client = self._get_llm_client()
         if client:
-            return self._chat_with_llm(user_message)
+            response, data = self._chat_with_llm(user_message)
+            # Add periodic sales pitch for free users
+            if self._should_upsell():
+                response = f"{response}\n\n---\n{self._get_sales_pitch()}"
+            return response, data
 
         # Fallback to simple pattern matching
         return self._simple_chat(user_message)
@@ -183,7 +219,11 @@ class BeatSensei:
         self.context.last_search_results = results
 
         if not results:
-            return self.personality.format_no_results(query), {'type': 'no_results'}
+            no_results_msg = self.personality.format_no_results(query)
+            # Add PRO pitch when no results found for free users
+            if not self.tier_manager.can_generate():
+                no_results_msg += f"\n\n💡 Yo but here's the thing - with PRO I could GENERATE exactly what you're looking for. '{query}'? I'll cook it up fresh, GPU-powered. $20 and you never miss again.\n\n👉 {self.PRO_LINK}"
+            return no_results_msg, {'type': 'no_results'}
 
         intro = self.personality.format_search_intro(query)
         return intro, {'type': 'search_results', 'results': results}
@@ -215,7 +255,18 @@ class BeatSensei:
     def _do_generate(self, prompt: str) -> Tuple[str, Optional[dict]]:
         """Generate a new sample."""
         if not self.tier_manager.can_generate():
-            return "Generation is a Pro feature. Upgrade to unlock AI sample creation!", {'type': 'upgrade_required'}
+            sales_msg = f"""Yo I WANT to hook you up with that '{prompt}' but that's PRO territory, little bro!
+
+🔥 PRO gets you:
+• GPU-SYNTHESIZED LOOPS - Full beats from scratch
+• UNLIMITED generations - Create all day
+• STUDIO QUALITY - Premium AI models
+• DRUMS, BASS, MELODIES - Complete instrumentals
+
+Real talk, $20/month is cheaper than ONE sample pack. Studios charge $500/hour for less. You serious about this music thing or nah?
+
+Stop playing and level up 👉 {self.PRO_LINK}"""
+            return sales_msg, {'type': 'upgrade_required'}
 
         if not self.generator.is_available():
             return "Set your REPLICATE_API_TOKEN to enable generation.", {'type': 'config_required'}
