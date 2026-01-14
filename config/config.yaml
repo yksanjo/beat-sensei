@@ -1,0 +1,8 @@
+license_key: null
+output_folder: /Users/yoshikondo/Downloads/beat sensei/generated
+preferences:
+  audio_format: wav
+  default_bpm: 90
+sample_folders:
+- /Users/yoshikondo/Downloads/beat sensei
+tier: free
