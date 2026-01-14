@@ -28,15 +28,27 @@ echo "Found Python $PYTHON_VERSION"
 
 # Set install directory
 INSTALL_DIR="${HOME}/.beat-sensei"
+REPO_URL="https://github.com/yksanjo/beat-sensei.git"
 
 # Clone or update repository
 if [ -d "$INSTALL_DIR" ]; then
-    echo "Updating existing installation..."
+    # Check if it's the correct repo
     cd "$INSTALL_DIR"
-    git pull origin main
+    CURRENT_REMOTE=$(git remote get-url origin 2>/dev/null || echo "")
+
+    if [ "$CURRENT_REMOTE" = "$REPO_URL" ]; then
+        echo "Updating existing installation..."
+        git pull origin main
+    else
+        echo "Found old/incorrect installation, reinstalling..."
+        cd ..
+        rm -rf "$INSTALL_DIR"
+        git clone "$REPO_URL" "$INSTALL_DIR"
+        cd "$INSTALL_DIR"
+    fi
 else
     echo "Installing Beat-Sensei..."
-    git clone https://github.com/yksanjo/beat-sensei.git "$INSTALL_DIR"
+    git clone "$REPO_URL" "$INSTALL_DIR"
     cd "$INSTALL_DIR"
 fi
 

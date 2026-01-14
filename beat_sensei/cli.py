@@ -26,9 +26,18 @@ app = typer.Typer(
     name="beat-sensei",
     help="Your AI Sample Master - Hip-Hop Edition",
     no_args_is_help=False,
+    invoke_without_command=True,
 )
 
 console = Console()
+
+
+@app.callback(invoke_without_command=True)
+def default_command(ctx: typer.Context):
+    """Run interactive chat if no command is provided."""
+    if ctx.invoked_subcommand is None:
+        # No subcommand provided, run the main chat
+        main()
 
 # Styles
 SENSEI_STYLE = Style(color="cyan", bold=True)
