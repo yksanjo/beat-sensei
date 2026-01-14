@@ -37,7 +37,7 @@ def default_command(ctx: typer.Context):
     """Run interactive chat if no command is provided."""
     if ctx.invoked_subcommand is None:
         # No subcommand provided, run the main chat
-        main()
+        run_chat()
 
 # Styles
 SENSEI_STYLE = Style(color="cyan", bold=True)
@@ -115,11 +115,8 @@ def create_sensei(config: Config) -> BeatSensei:
     )
 
 
-@app.command()
-def main(
-    scan_first: Optional[str] = typer.Option(None, "--scan", "-s", help="Scan a folder before starting"),
-):
-    """Start interactive Beat-Sensei chat."""
+def run_chat(scan_first: Optional[str] = None):
+    """Run the interactive Beat-Sensei chat (core function)."""
     config = Config.load()
 
     # Scan additional folder if provided
@@ -183,6 +180,14 @@ def main(
             break
         except Exception as e:
             console.print(f"[red]Error: {e}[/red]")
+
+
+@app.command()
+def main(
+    scan_first: Optional[str] = typer.Option(None, "--scan", "-s", help="Scan a folder before starting"),
+):
+    """Start interactive Beat-Sensei chat."""
+    run_chat(scan_first)
 
 
 @app.command()
