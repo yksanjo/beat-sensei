@@ -76,11 +76,24 @@ echo ""
 echo "Installation complete!"
 echo ""
 echo "Quick Start:"
-echo "  1. Scan your sample folder:  beat-sensei scan ~/Music/Samples"
+echo "  1. Download free samples:    beat-sensei download all"
 echo "  2. Start chatting:           beat-sensei"
+echo ""
+echo "Or scan your own samples:"
+echo "  beat-sensei scan ~/Music/Samples"
 echo ""
 echo "For AI generation (Pro), set your API key:"
 echo "  export REPLICATE_API_TOKEN=your_token_here"
+echo ""
+
+# Ask if user wants to download samples now
+read -p "Download free sample packs now? (y/n) " -n 1 -r
+echo
+if [[ $REPLY =~ ^[Yy]$ ]]; then
+    echo ""
+    "$BEAT_SENSEI_BIN" download all
+fi
+
 echo ""
 echo "Let's make some heat!"
 echo ""

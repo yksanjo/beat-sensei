@@ -28,6 +28,7 @@ pip install git+https://github.com/yksanjo/beat-sensei.git
 
 ## Features
 
+- **Free Sample Packs** - Download starter samples with one command
 - **Smart Sample Search** - Find samples by description ("dusty soul chops", "dark 808 bass")
 - **Audio Preview** - Play samples directly in your terminal
 - **AI Generation** - Create custom samples using MusicGen (Pro tier)
@@ -37,16 +38,44 @@ pip install git+https://github.com/yksanjo/beat-sensei.git
 ## Quick Start
 
 ```bash
-# Install
-cd beat-sensei
-pip install -e ".[full]"
+# 1. Install
+curl -fsSL https://raw.githubusercontent.com/yksanjo/beat-sensei/main/install.sh | bash
 
-# Scan your sample folder
-beat-sensei scan ~/Downloads/beat\ sensei
+# 2. Download free sample packs
+beat-sensei download all
 
-# Start chatting
+# 3. Start chatting!
 beat-sensei
 ```
+
+## Get Samples
+
+### Download Built-in Packs
+```bash
+beat-sensei download              # List available packs
+beat-sensei download starter      # Download starter pack
+beat-sensei download drums        # Download drum kit
+beat-sensei download bass         # Download 808s & bass
+beat-sensei download all          # Download everything
+```
+
+### Scan Your Own Samples
+```bash
+beat-sensei scan ~/Music/Samples
+beat-sensei scan ~/Downloads/SamplePacks
+```
+
+### Free Sample Resources
+```bash
+beat-sensei download --resources  # Show list of free sample sites
+```
+
+Sites with free samples:
+- [Freesound.org](https://freesound.org) - 500,000+ Creative Commons samples
+- [Splice Free](https://splice.com/features/free-samples) - Free packs from Splice
+- [Cymatics](https://cymatics.fm/pages/free-download-vault) - Free sample packs
+- [99sounds](https://99sounds.org) - High-quality free sounds
+- [Bedroom Producers Blog](https://bedroomproducersblog.com/free-samples/) - Curated packs
 
 ## Commands
 

@@ -322,6 +322,97 @@ def auth(license_key: str = typer.Argument(..., help="Your license key")):
         console.print("[red]Invalid license key.[/red]")
 
 
+@app.command()
+def download(
+    pack: str = typer.Argument(None, help="Pack to download: starter, drums, bass (or 'all')"),
+    list_packs: bool = typer.Option(False, "--list", "-l", help="List available packs"),
+    resources: bool = typer.Option(False, "--resources", "-r", help="Show free sample resources"),
+):
+    """Download free sample packs to get started."""
+    from .samples.downloader import SampleDownloader, FREE_SAMPLE_RESOURCES, SAMPLE_PACKS
+
+    downloader = SampleDownloader()
+
+    # Show resources
+    if resources:
+        console.print("\n[bold cyan]Free Sample Resources[/bold cyan]\n")
+        table = Table(box=box.ROUNDED)
+        table.add_column("Site", style="cyan")
+        table.add_column("Description", style="white")
+        table.add_column("URL", style="dim")
+
+        for resource in FREE_SAMPLE_RESOURCES:
+            table.add_row(resource["name"], resource["description"], resource["url"])
+
+        console.print(table)
+        console.print("\n[dim]Visit these sites to download more samples![/dim]\n")
+        return
+
+    # List available packs
+    if list_packs or pack is None:
+        console.print("\n[bold cyan]Available Sample Packs[/bold cyan]\n")
+        table = Table(box=box.ROUNDED)
+        table.add_column("Pack", style="cyan")
+        table.add_column("Description", style="white")
+
+        for pack_id, pack_info in SAMPLE_PACKS.items():
+            table.add_row(pack_id, pack_info["description"])
+
+        console.print(table)
+        console.print("\n[dim]Download with: beat-sensei download <pack-name>[/dim]")
+        console.print("[dim]Download all:  beat-sensei download all[/dim]")
+        console.print("[dim]Free resources: beat-sensei download --resources[/dim]\n")
+        return
+
+    # Download packs
+    console.print(get_banner())
+
+    if pack == "all":
+        console.print("[cyan]Downloading all sample packs...[/cyan]\n")
+        with Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            console=console,
+        ) as progress:
+            for pack_name in SAMPLE_PACKS:
+                task = progress.add_task(f"Downloading {pack_name}...", total=None)
+                success, msg, files = downloader.download_pack(pack_name)
+                progress.update(task, completed=True, description=f"[green]{pack_name} done![/green]")
+    else:
+        if pack not in SAMPLE_PACKS:
+            console.print(f"[red]Unknown pack: {pack}[/red]")
+            console.print("[dim]Use --list to see available packs[/dim]")
+            raise typer.Exit(1)
+
+        console.print(f"[cyan]Downloading {pack} pack...[/cyan]\n")
+        with Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            console=console,
+        ) as progress:
+            task = progress.add_task(f"Downloading {pack}...", total=None)
+            success, msg, files = downloader.download_pack(pack)
+            progress.update(task, completed=True)
+
+        if success:
+            console.print(f"\n[green]{msg}[/green]")
+        else:
+            console.print(f"\n[red]{msg}[/red]")
+
+    # Auto-scan downloaded folder
+    console.print("\n[cyan]Scanning downloaded samples...[/cyan]")
+    scanner = SampleScanner()
+    new_samples = scanner.scan_folder(downloader.output_dir)
+    console.print(f"[green]Indexed {len(new_samples)} new samples![/green]")
+
+    # Update config
+    cfg = Config.load()
+    cfg.add_sample_folder(str(downloader.output_dir))
+    cfg.save()
+
+    console.print("\n[bold green]Ready to go! Run 'beat-sensei' to start.[/bold green]\n")
+
+
 def show_help():
     """Show help information."""
     help_table = Table(title="Beat-Sensei Commands", box=box.ROUNDED)
