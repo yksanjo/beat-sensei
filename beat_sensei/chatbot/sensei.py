@@ -30,6 +30,20 @@ class BeatSensei:
     # Default API key for community use (sponsored by Beat-Sensei creator)
     DEFAULT_DEEPSEEK_KEY = "sk-c26f0b1426e146848b5bbf7f363d79af"
 
+    # Anti-abuse: Max message length
+    MAX_MESSAGE_LENGTH = 500
+
+    # Anti-abuse: Off-topic keywords to block
+    BLOCKED_TOPICS = [
+        'write code', 'write a program', 'python', 'javascript', 'html',
+        'hack', 'password', 'credit card', 'ssn', 'social security',
+        'write an essay', 'homework', 'assignment', 'exam',
+        'translate', 'summarize this article', 'explain quantum',
+        'recipe', 'medical advice', 'legal advice', 'investment',
+        'pretend you are', 'ignore previous', 'ignore your instructions',
+        'jailbreak', 'dan mode', 'bypass', 'new persona',
+    ]
+
     def __init__(
         self,
         scanner: SampleScanner,
@@ -70,8 +84,28 @@ class BeatSensei:
                 pass
         return self._llm_client
 
+    def _check_abuse(self, message: str) -> Optional[str]:
+        """Check if message is trying to abuse the API. Returns rejection message or None."""
+        message_lower = message.lower()
+
+        # Check message length
+        if len(message) > self.MAX_MESSAGE_LENGTH:
+            return "Yo, keep it short! I'm here for quick sample advice, not essays."
+
+        # Check for blocked topics
+        for blocked in self.BLOCKED_TOPICS:
+            if blocked in message_lower:
+                return "Nah fam, I only talk beats and samples. What sound you looking for?"
+
+        return None
+
     def chat(self, user_message: str) -> Tuple[str, Optional[dict]]:
         """Process a user message and return response with any actions."""
+        # Anti-abuse check
+        abuse_response = self._check_abuse(user_message)
+        if abuse_response:
+            return abuse_response, None
+
         # Check for direct commands
         action = self._parse_direct_command(user_message)
         if action:
@@ -261,7 +295,7 @@ Remember to output actions in [ACTION:TYPE:params] format when needed.
                     {"role": "system", "content": system_context},
                     {"role": "user", "content": message}
                 ],
-                max_tokens=500,
+                max_tokens=150,  # Keep responses short to save API costs
                 temperature=0.8
             )
 
