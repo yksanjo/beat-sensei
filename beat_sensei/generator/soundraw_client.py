@@ -91,9 +91,10 @@ class SoundrawGenerator:
             "mysterious": "Mysterious", "eerie": "Mysterious",
             "hopeful": "Hopeful", "inspiring": "Hopeful", "uplifting": "Hopeful",
             "scary": "Scary", "horror": "Scary", "creepy": "Scary",
-            "love": "Love", "romantic": "Love", "sexy": "Sexy",
+            "love": "Love", "romantic": "Love", "sexy": "Sexy", "sensual": "Sexy", "sultry": "Sexy",
             "playful": "Playful", "fun": "Playful", "bouncy": "Playful",
-            "serious": "Serious", "epic": "Powerful", "cinematic": "Powerful"
+            "serious": "Serious", "epic": "Powerful", "cinematic": "Powerful",
+            "moody": "Dark", "atmospheric": "Mysterious"
         }
 
         for keyword, mood in mood_keywords.items():
@@ -104,6 +105,7 @@ class SoundrawGenerator:
         # Detect genre from prompt
         genre_keywords = {
             "trap": "Hip Hop", "hip hop": "Hip Hop", "rap": "Hip Hop", "boom bap": "Hip Hop",
+            "drill": "Hip Hop",  # Drill is a subgenre of hip hop
             "lo-fi": "Lo-fi", "lofi": "Lo-fi", "study": "Lo-fi",
             "electronic": "Electronic", "edm": "Electronic", "synth": "Electronic",
             "jazz": "Jazz", "smooth": "Jazz",

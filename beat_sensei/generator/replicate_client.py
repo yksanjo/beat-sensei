@@ -51,11 +51,14 @@ class ReplicateGenerator:
 
         try:
             import replicate
+            
+            # Format the prompt for better music generation
+            formatted_prompt = self._format_prompt(prompt, duration)
 
             output = replicate.run(
                 self.MODEL_ID,
                 input={
-                    "prompt": prompt,
+                    "prompt": formatted_prompt,
                     "model_version": model_version,
                     "duration": int(duration),
                     "temperature": temperature,
@@ -95,6 +98,70 @@ class ReplicateGenerator:
                 error=str(e),
                 prompt=prompt
             )
+
+    def _format_prompt(self, user_prompt: str, duration: float) -> str:
+        """Format user prompt for optimal music generation."""
+        user_prompt_lower = user_prompt.lower()
+        
+        # Check for specific genres to apply specialized prompts
+        if any(word in user_prompt_lower for word in ['drill', 'r&b', 'rnb', 'sexy', 'smooth']):
+            # Use the specialized R&B Drill prompt
+            bpm = 145  # Middle of 140-150 BPM range
+            
+            # Calculate bars based on duration and BPM
+            # 4 beats per bar, 60 seconds per minute
+            seconds_per_bar = 240 / bpm  # 4 beats * 60 seconds / bpm
+            bars = int(duration / seconds_per_bar)
+            
+            return f"""Create a {bars}-bar R&B drill sample loop with the following characteristics:
+
+MUSICAL ELEMENTS:
+- Genre: Sexy Drill (R&B-influenced drill)
+- Tempo: {bpm} BPM (standard drill tempo)
+- Chord Progression: Use smooth R&B progressions (examples: vi-IV-I-V or ii-V-I-vi in minor keys)
+- Drum Pattern: Hard-hitting drill drums with syncopated hi-hats, snappy snares on 2 and 4, and rolling 808 patterns
+- Bass: Heavy, distorted 808 bass with melodic slides and sustained notes
+- Atmosphere: Sensual, dark, and moody with sultry undertones
+
+LOOP REQUIREMENTS:
+- Exact duration: {bars} bars (calculate based on BPM for seamless looping)
+- Perfect loop points: Ensure the ending note/rhythm transitions smoothly back to the beginning
+- No fade-ins or fade-outs
+- Maintain consistent energy throughout to enable seamless repetition
+
+PRODUCTION STYLE:
+- Mix: Bass-heavy with clear melodic elements
+- Texture: Layered but not cluttered - producers need room to add vocals/instruments
+- Reference sound: Blend of Pop Smoke's melodic sensibility with Brent Faiyaz's R&B smoothness
+
+USER REQUEST: {user_prompt}"""
+        
+        # For trap/hip-hop
+        elif any(word in user_prompt_lower for word in ['trap', 'hip hop', 'hiphop', '808', 'bass']):
+            return f"""Create a professional {user_prompt} track with:
+- Heavy 808 bass with distortion and slides
+- Crisp trap drums with rolling hi-hats
+- Dark atmospheric melodies
+- Perfectly mixed for modern hip-hop production
+- Ready to use as a beat foundation"""
+        
+        # For lo-fi
+        elif any(word in user_prompt_lower for word in ['lo-fi', 'lofi', 'chill', 'relax', 'study']):
+            return f"""Create a {user_prompt} track with:
+- Warm, vinyl crackle texture
+- Simple jazz or soul chord progressions
+- Laid-back drum groove with swing
+- Melancholy piano or guitar melodies
+- Subtle atmospheric pads
+- Perfect for studying or relaxing"""
+        
+        # Default prompt for other genres
+        else:
+            return f"""Create a professional music sample: {user_prompt}
+- High quality production
+- Clear mix with balanced frequencies
+- Suitable for music production
+- Ready to use in a DAW"""
 
     def _save_output(self, output_url: str, prompt: str) -> Path:
         """Download and save the generated audio."""

@@ -44,6 +44,11 @@ class LocalBeatGenerator:
             'snare': [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0],
             'hat': [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
         },
+        'drill': {
+            'kick': [1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1],  # More syncopated
+            'snare': [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0],
+            'hat': [1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0],  # Syncopated hi-hats
+        },
         'hiphop': {
             'kick': [1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0],
             'snare': [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0],
@@ -134,14 +139,19 @@ class LocalBeatGenerator:
     
     def _detect_genre(self, prompt: str) -> str:
         """Detect genre from prompt."""
+        prompt_lower = prompt.lower()
+        
         # Check for specific genres
-        for genre in ['trap', 'hiphop', 'house', 'techno', 'lo-fi', 'drill', 'dubstep']:
-            if genre in prompt:
+        for genre in ['trap', 'hiphop', 'house', 'techno', 'lo-fi', 'drill', 'dubstep', 'r&b', 'rnb']:
+            if genre in prompt_lower:
+                # Special case for R&B drill
+                if genre in ['r&b', 'rnb'] and 'drill' in prompt_lower:
+                    return 'drill'
                 return genre
         
         # Check for mood-based genre mapping
         for mood, genre in self.MOOD_GENRE_MAP.items():
-            if mood in prompt:
+            if mood in prompt_lower:
                 return genre
         
         # Default to trap
@@ -149,9 +159,10 @@ class LocalBeatGenerator:
     
     def _detect_mood(self, prompt: str) -> str:
         """Detect mood from prompt."""
-        moods = ['dark', 'hard', 'aggressive', 'chill', 'soft', 'peaceful', 'groovy', 'funky']
+        prompt_lower = prompt.lower()
+        moods = ['dark', 'hard', 'aggressive', 'chill', 'soft', 'peaceful', 'groovy', 'funky', 'sexy', 'sensual', 'sultry', 'moody']
         for mood in moods:
-            if mood in prompt:
+            if mood in prompt_lower:
                 return mood
         
         return 'neutral'
