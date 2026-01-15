@@ -51,7 +51,22 @@ class BeatSensei:
         supabase_anon_key: Optional[str] = None,
     ):
         self.personality = SenseiPersonality()
-        self.generator = SoundrawGenerator(api_token=api_key or os.getenv("SOUNDRAW_API_TOKEN"))
+        
+        # Try Soundraw generator first, fall back to local generator
+        soundraw_key = api_key or os.getenv("SOUNDRAW_API_TOKEN")
+        if soundraw_key:
+            from ..generator.soundraw_client import SoundrawGenerator
+            self.generator = SoundrawGenerator(api_token=soundraw_key)
+        else:
+            # Fall back to local beat generator
+            from ..generator.local_generator import LocalBeatGenerator, SimpleBeatGenerator
+            try:
+                self.generator = LocalBeatGenerator()
+                if not self.generator.is_available():
+                    self.generator = SimpleBeatGenerator()
+            except ImportError:
+                self.generator = SimpleBeatGenerator()
+        
         self.sample_db = SampleDatabase(url=supabase_url, key=supabase_anon_key)
         self.tier_manager = tier_manager
         self.context = ChatContext()
@@ -282,12 +297,8 @@ Try: 'make dark trap high energy' or 'create chill lo-fi peaceful'
         if not self.tier_manager.can_generate():
             return self.personality.format_daily_limit_reached(), {'type': 'limit_reached'}
 
-        # Check if API is configured
-        if not self.generator.is_available():
-            return ("I need the Soundraw API to create tracks.\n\n"
-                    "Set up your key:\n"
-                    "1. Get one at soundraw.io\n"
-                    "2. Run: export SOUNDRAW_API_TOKEN=your_key"), {'type': 'config_required'}
+        # Note: We now have fallback generators, so we don't block if Soundraw isn't available
+        # The generator will use local beat generation or simple text generation as fallback
 
         # Get max duration based on tier
         max_duration = self.tier_manager.get_max_duration()
@@ -301,10 +312,21 @@ Try: 'make dark trap high energy' or 'create chill lo-fi peaceful'
             self.tier_manager.use_generation()
 
             remaining = self.tier_manager.get_remaining_generations()
+            
+            # Check what type of generator we used
+            generator_type = "AI"
+            if hasattr(self.generator, '__class__'):
+                class_name = str(self.generator.__class__)
+                if "LocalBeatGenerator" in class_name:
+                    generator_type = "local"
+                elif "SimpleBeatGenerator" in class_name:
+                    generator_type = "simple"
+            
             success_msg = self.personality.format_generation_success(
                 result.filepath,
                 mood=result.mood,
-                genre=result.genre
+                genre=result.genre,
+                generator_type=generator_type
             )
 
             # Suggest related samples if available
@@ -338,7 +360,8 @@ Try: 'make dark trap high energy' or 'create chill lo-fi peaceful'
                 'type': 'generated',
                 'file': result.filepath,
                 'mood': result.mood,
-                'genre': result.genre
+                'genre': result.genre,
+                'generator_type': generator_type
             }
         else:
             tip = self.personality.format_generation_tip()

@@ -15,10 +15,12 @@ Your AI Music Production Mentor - Create original tracks, browse curated samples
 
 ## Features
 
-- **AI Music Generation** - Create original tracks with Soundraw AI (5 free/day)
+- **Instant Beat Generation** - Create tracks immediately with local beat generator
+- **AI Music Generation** - Optional: Create original tracks with Soundraw AI (5 free/day)
 - **Curated Sample Library** - Browse 1,500+ hand-picked samples (kicks, snares, 808s, etc.)
 - **Production Mentor** - Get real advice from an experienced producer personality
 - **Learn While You Create** - Tips and guidance built into every interaction
+- **Free Sample Packs** - Download ready-to-use drum kits and sounds
 
 ## Quick Start
 
@@ -28,16 +30,18 @@ Your AI Music Production Mentor - Create original tracks, browse curated samples
 pip install git+https://github.com/yksanjo/beat-sensei.git
 ```
 
-### Set Up APIs
+### Set Up (Optional - works out of the box!)
 
 ```bash
-# For AI generation (get key at soundraw.io)
+# For AI generation (optional - get key at soundraw.io)
 export SOUNDRAW_API_TOKEN=your_soundraw_key
 
 # For sample library (optional - get free account at supabase.com)
 export SUPABASE_URL=your_project_url
 export SUPABASE_ANON_KEY=your_anon_key
 ```
+
+**Beat-Sensei works immediately without any setup!** The local beat generator creates tracks right away. Add API keys for enhanced features.
 
 ### Start Creating
 

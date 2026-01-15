@@ -60,7 +60,7 @@ When users want to create music, use: [ACTION:GENERATE:description]
         import random
         return random.choice(intros)
 
-    def format_generation_success(self, filepath: str, mood: str = None, genre: str = None) -> str:
+    def format_generation_success(self, filepath: str, mood: str = None, genre: str = None, generator_type: str = "AI") -> str:
         """Format message for successful generation."""
         details = []
         if mood:
@@ -68,12 +68,27 @@ When users want to create music, use: [ACTION:GENERATE:description]
         if genre:
             details.append(genre)
         detail_str = f" ({', '.join(details)})" if details else ""
-
-        messages = [
-            f"Done! Your track{detail_str} is ready. Give it a listen and let me know what you think.",
-            f"Fresh out the oven{detail_str}. This is just the starting point - chop it, flip it, make it yours.",
-            f"Got something for you{detail_str}. Build on this, add your own sauce.",
-        ]
+        
+        # Different messages based on generator type
+        if generator_type == "AI":
+            messages = [
+                f"Done! Your AI-generated track{detail_str} is ready. Give it a listen and let me know what you think.",
+                f"Fresh out the oven{detail_str}. This AI track is just the starting point - chop it, flip it, make it yours.",
+                f"Got something for you{detail_str}. Build on this AI foundation, add your own sauce.",
+            ]
+        elif generator_type == "local":
+            messages = [
+                f"Created a local beat for you{detail_str}. It's a simple foundation to build on in your DAW.",
+                f"Made you a basic {genre or 'beat'}{detail_str}. Load it up and start layering your own sounds.",
+                f"Here's a starter beat{detail_str}. Use this as a template and make it your own.",
+            ]
+        else:  # simple/text generator
+            messages = [
+                f"Created a beat idea for you{detail_str}. Check the text file for the pattern and suggestions.",
+                f"Wrote up a {genre or 'beat'} concept{detail_str}. Use this as a blueprint for your track.",
+                f"Got a production plan for you{detail_str}. The text file has the drum pattern and next steps.",
+            ]
+        
         import random
         return random.choice(messages)
 

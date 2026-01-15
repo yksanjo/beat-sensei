@@ -137,19 +137,30 @@ def generate(
     prompt: str = typer.Argument(..., help="Description of the track to generate"),
     duration: int = typer.Option(30, "--duration", "-d", help="Duration in seconds (free: 30s, pro: 300s)"),
 ):
-    """Generate a new track using Soundraw AI (5 free per day!)."""
-    from .generator.soundraw_client import SoundrawGenerator
-
+    """Generate a new track using AI or local beat generator (5 free per day!)."""
     config = Config.load()
     tier_manager = TierManager()
-    generator = SoundrawGenerator(api_token=config.soundraw_api_token)
-
-    if not generator.is_available():
-        console.print("[red]Soundraw API not configured.[/red]")
-        console.print("\n[bold]To get started:[/bold]")
-        console.print("1. Get your API key at [cyan]soundraw.io[/cyan]")
-        console.print("2. Run: [green]export SOUNDRAW_API_TOKEN=your_key[/green]")
-        raise typer.Exit(1)
+    
+    # Try Soundraw first, fall back to local generator
+    if config.soundraw_api_token:
+        from .generator.soundraw_client import SoundrawGenerator
+        generator = SoundrawGenerator(api_token=config.soundraw_api_token)
+        generator_type = "AI"
+    else:
+        # Fall back to local beat generator
+        from .generator.local_generator import LocalBeatGenerator, SimpleBeatGenerator
+        try:
+            generator = LocalBeatGenerator()
+            if not generator.is_available():
+                generator = SimpleBeatGenerator()
+            generator_type = "local"
+        except ImportError:
+            generator = SimpleBeatGenerator()
+            generator_type = "simple"
+        
+        console.print("[yellow]Note: Using local beat generator (Soundraw API not configured)[/yellow]")
+        console.print("[dim]For AI generation, set: export SOUNDRAW_API_TOKEN=your_key[/dim]")
+        console.print("")
 
     if not tier_manager.can_generate():
         console.print("[yellow]You've used all your generations for today![/yellow]")
@@ -164,7 +175,10 @@ def generate(
 
     remaining = tier_manager.get_remaining_generations()
     console.print(f"\n[cyan]Creating:[/cyan] {prompt}")
-    console.print(f"[dim]({remaining} generations remaining today)[/dim]\n")
+    if generator_type == "AI":
+        console.print(f"[dim](AI generation, {remaining} remaining today)[/dim]\n")
+    else:
+        console.print(f"[dim](Local generation, {remaining} remaining today)[/dim]\n")
 
     with Progress(
         SpinnerColumn(),
@@ -177,15 +191,32 @@ def generate(
 
     if result.success:
         tier_manager.use_generation()
-        console.print(f"\n[green]Done![/green] Saved to: {result.filepath}")
+        
+        if generator_type == "AI":
+            console.print(f"\n[green]✓ AI track generated![/green] Saved to: {result.filepath}")
+        elif generator_type == "local":
+            console.print(f"\n[green]✓ Local beat created![/green] Saved to: {result.filepath}")
+        else:
+            console.print(f"\n[green]✓ Beat idea created![/green] Saved to: {result.filepath}")
+            
         if result.mood or result.genre:
             console.print(f"[dim]Style: {result.mood} - {result.genre}[/dim]")
 
         remaining_after = tier_manager.get_remaining_generations()
         console.print(f"\n[dim]({remaining_after} generations left today)[/dim]")
+        
+        # Show helpful next steps
+        if generator_type != "AI":
+            console.print(f"\n[bold]Next steps:[/bold]")
+            console.print(f"1. Load this in your DAW")
+            console.print(f"2. Add your own sounds and samples")
+            console.print(f"3. For AI generation: export SOUNDRAW_API_TOKEN=your_key")
     else:
         console.print(f"\n[red]Generation failed:[/red] {result.error}")
-        console.print("\n[dim]Tip: Be specific! Try 'dark trap high energy' or 'chill lo-fi peaceful'[/dim]")
+        if "soundfile" in str(result.error).lower() or "scipy" in str(result.error).lower():
+            console.print("\n[dim]Install audio packages: pip install soundfile scipy[/dim]")
+        else:
+            console.print("\n[dim]Tip: Be specific! Try 'dark trap high energy' or 'chill lo-fi peaceful'[/dim]")
 
 
 @app.command()
