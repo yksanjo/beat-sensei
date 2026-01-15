@@ -1,42 +1,37 @@
-"""Main Beat-Sensei chatbot orchestrator."""
+"""Main Beat-Sensei chatbot orchestrator - AI Music Generation + Mentorship + Sample Library."""
 
 import re
 import os
-from typing import Optional, List, Tuple
+from typing import Optional, Tuple, List
 from dataclasses import dataclass
 
 from .personality import SenseiPersonality
-from ..samples.scanner import SampleScanner, SampleMetadata
-from ..samples.search import SampleSearch, SearchResult
-from ..samples.player import SamplePlayer
-from ..generator.replicate_client import ReplicateGenerator
+from ..generator.soundraw_client import SoundrawGenerator
+from ..database.supabase_client import SampleDatabase, Sample
 from ..auth.tiers import TierManager
 
 
 @dataclass
 class ChatContext:
     """Conversation context."""
-    last_search_results: List[SearchResult] = None
-    last_played: Optional[str] = None
     last_generated: Optional[str] = None
+    last_samples: Optional[List[Sample]] = None
+    generation_count: int = 0
 
 
 class BeatSensei:
-    """Main chatbot orchestrator that handles conversation and actions."""
+    """Main chatbot orchestrator for music generation, samples, and mentorship."""
 
     # DeepSeek API configuration
     DEEPSEEK_BASE_URL = "https://api.deepseek.com"
     DEEPSEEK_MODEL = "deepseek-chat"
-    # Default API key for community use (sponsored by Beat-Sensei creator)
     DEFAULT_DEEPSEEK_KEY = "sk-c26f0b1426e146848b5bbf7f363d79af"
 
-    # PRO subscription link - $20/month
+    # Pro subscription link
     PRO_LINK = "https://buy.stripe.com/test_bJeeVd6Os2bsfe649f6Zy00"
 
-    # Anti-abuse: Max message length
+    # Anti-abuse settings
     MAX_MESSAGE_LENGTH = 500
-
-    # Anti-abuse: Off-topic keywords to block
     BLOCKED_TOPICS = [
         'write code', 'write a program', 'python', 'javascript', 'html',
         'hack', 'password', 'credit card', 'ssn', 'social security',
@@ -47,86 +42,59 @@ class BeatSensei:
         'jailbreak', 'dan mode', 'bypass', 'new persona',
     ]
 
-    # Sales pitches for upselling PRO
-    SALES_PITCHES = [
-        "Yo real talk - you should be on PRO. $20 and I can GENERATE any sound you want. GPU power, little bro.",
-        "You still on free? Come on now. PRO is $20 for UNLIMITED AI beats. Stop playing.",
-        "Every serious producer got AI in their toolkit now. PRO is $20. Level up.",
-        "I'm trying to put you on game here - PRO lets me create FULL loops, drums, melodies. $20. That's it.",
-        "You know what's crazy? $20 gets you unlimited GPU generation. Studios charge $500/hour. Do the math.",
-    ]
-
     def __init__(
         self,
-        scanner: SampleScanner,
         tier_manager: TierManager,
         api_key: Optional[str] = None,
         deepseek_api_key: Optional[str] = None,
+        supabase_url: Optional[str] = None,
+        supabase_anon_key: Optional[str] = None,
     ):
         self.personality = SenseiPersonality()
-        self.scanner = scanner
-        self.search = SampleSearch(scanner)
-        self.player = SamplePlayer()
-        self.generator = ReplicateGenerator(api_token=api_key)
+        self.generator = SoundrawGenerator(api_token=api_key or os.getenv("SOUNDRAW_API_TOKEN"))
+        self.sample_db = SampleDatabase(url=supabase_url, key=supabase_anon_key)
         self.tier_manager = tier_manager
         self.context = ChatContext()
 
-        # DeepSeek API key - use provided, env var, or default
+        # DeepSeek API key
         self.deepseek_api_key = deepseek_api_key or os.getenv("DEEPSEEK_API_KEY") or self.DEFAULT_DEEPSEEK_KEY
 
         # LLM client
         self._llm_client = None
-
-        # Message counter for periodic sales pitches
         self.message_count = 0
 
     def _get_llm_client(self):
-        """Get or create DeepSeek client (OpenAI-compatible)."""
+        """Get or create DeepSeek client."""
         if self._llm_client is None:
             try:
                 from openai import OpenAI
 
                 if self.deepseek_api_key:
-                    # Use DeepSeek
                     self._llm_client = OpenAI(
                         api_key=self.deepseek_api_key,
                         base_url=self.DEEPSEEK_BASE_URL,
                     )
                 elif os.getenv("OPENAI_API_KEY"):
-                    # Fallback to OpenAI
                     self._llm_client = OpenAI()
             except ImportError:
                 pass
         return self._llm_client
 
     def _check_abuse(self, message: str) -> Optional[str]:
-        """Check if message is trying to abuse the API. Returns rejection message or None."""
+        """Check for abuse attempts."""
         message_lower = message.lower()
 
-        # Check message length
         if len(message) > self.MAX_MESSAGE_LENGTH:
-            return "Yo, keep it short! I'm here for quick sample advice, not essays."
+            return "Keep it short - what kind of sound are you looking for?"
 
-        # Check for blocked topics
         for blocked in self.BLOCKED_TOPICS:
             if blocked in message_lower:
-                return "Nah fam, I only talk beats and samples. What sound you looking for?"
+                return "I'm all about music production - what do you want to create?"
 
         return None
 
-    def _get_sales_pitch(self) -> str:
-        """Get a random sales pitch for PRO."""
-        import random
-        pitch = random.choice(self.SALES_PITCHES)
-        return f"{pitch}\n\n👉 {self.PRO_LINK}"
-
-    def _should_upsell(self) -> bool:
-        """Check if we should add a sales pitch (every 3 messages for free users)."""
-        return not self.tier_manager.can_generate() and self.message_count % 3 == 0
-
     def chat(self, user_message: str) -> Tuple[str, Optional[dict]]:
-        """Process a user message and return response with any actions."""
-        # Increment message counter
+        """Process a user message and return response."""
         self.message_count += 1
 
         # Anti-abuse check
@@ -137,54 +105,52 @@ class BeatSensei:
         # Check for direct commands
         action = self._parse_direct_command(user_message)
         if action:
-            response, data = self._execute_action(action)
-            # Add periodic sales pitch for free users
-            if self._should_upsell() and data and data.get('type') != 'upgrade_required':
-                response = f"{response}\n\n---\n{self._get_sales_pitch()}"
-            return response, data
+            return self._execute_action(action)
 
         # Use LLM if available
         client = self._get_llm_client()
         if client:
-            response, data = self._chat_with_llm(user_message)
-            # Add periodic sales pitch for free users
-            if self._should_upsell():
-                response = f"{response}\n\n---\n{self._get_sales_pitch()}"
-            return response, data
+            return self._chat_with_llm(user_message)
 
-        # Fallback to simple pattern matching
+        # Fallback
         return self._simple_chat(user_message)
 
     def _parse_direct_command(self, message: str) -> Optional[dict]:
-        """Parse direct commands like 'play 1', 'search bass'."""
-        message = message.strip().lower()
-
-        # Play command
-        if message.startswith('play '):
-            arg = message[5:].strip()
-            if arg.isdigit():
-                return {'action': 'play_index', 'index': int(arg)}
-            else:
-                return {'action': 'play_file', 'file': arg}
-
-        # Stop command
-        if message in ['stop', 'pause']:
-            return {'action': 'stop'}
-
-        # Search command
-        if message.startswith('search ') or message.startswith('find '):
-            query = message.split(' ', 1)[1]
-            return {'action': 'search', 'query': query}
+        """Parse direct commands."""
+        message_lower = message.strip().lower()
 
         # Generate command
-        if message.startswith('generate ') or message.startswith('gen ') or message.startswith('make '):
+        if message_lower.startswith(('generate ', 'gen ', 'make ', 'create ')):
             parts = message.split(' ', 1)
             if len(parts) > 1:
                 return {'action': 'generate', 'prompt': parts[1]}
 
-        # Random/inspire command
-        if message in ['random', 'inspire', 'surprise me']:
-            return {'action': 'random'}
+        # Sample search
+        if message_lower.startswith(('samples ', 'sample ', 'find ', 'search ')):
+            parts = message.split(' ', 1)
+            if len(parts) > 1:
+                return {'action': 'search_samples', 'query': parts[1]}
+
+        # Get samples by category
+        if message_lower in ['kicks', 'kick', 'snares', 'snare', 'hats', 'hat', '808s', '808', 'claps', 'clap', 'bass', 'percs', 'perc']:
+            category = message_lower.rstrip('s')  # Remove plural
+            if category == '808':
+                category = '808'
+            return {'action': 'category_samples', 'category': category}
+
+        # Play sample by number
+        if message_lower.startswith('play '):
+            arg = message_lower[5:].strip()
+            if arg.isdigit():
+                return {'action': 'play_sample', 'index': int(arg)}
+
+        # Random samples
+        if message_lower in ['random', 'inspire', 'surprise me', 'random samples']:
+            return {'action': 'random_samples'}
+
+        # Help with options
+        if message_lower in ['moods', 'genres', 'options', 'styles']:
+            return {'action': 'show_options'}
 
         return None
 
@@ -192,152 +158,273 @@ class BeatSensei:
         """Execute a parsed action."""
         action_type = action.get('action')
 
-        if action_type == 'play_index':
-            return self._play_by_index(action['index'])
-
-        elif action_type == 'play_file':
-            return self._play_file(action['file'])
-
-        elif action_type == 'stop':
-            self.player.stop()
-            return "Stopped playback.", None
-
-        elif action_type == 'search':
-            return self._do_search(action['query'])
-
-        elif action_type == 'generate':
+        if action_type == 'generate':
             return self._do_generate(action['prompt'])
 
-        elif action_type == 'random':
+        elif action_type == 'search_samples':
+            return self._search_samples(action['query'])
+
+        elif action_type == 'category_samples':
+            return self._get_category_samples(action['category'])
+
+        elif action_type == 'random_samples':
             return self._get_random_samples()
 
-        return "I didn't catch that. What you need?", None
+        elif action_type == 'play_sample':
+            return self._play_sample(action['index'])
 
-    def _do_search(self, query: str) -> Tuple[str, Optional[dict]]:
-        """Perform a sample search."""
-        results = self.search.search(query, limit=10)
-        self.context.last_search_results = results
+        elif action_type == 'show_options':
+            return self._show_generation_options()
 
-        if not results:
-            no_results_msg = self.personality.format_no_results(query)
-            # Add PRO pitch when no results found for free users
-            if not self.tier_manager.can_generate():
-                no_results_msg += f"\n\n💡 Yo but here's the thing - with PRO I could GENERATE exactly what you're looking for. '{query}'? I'll cook it up fresh, GPU-powered. $20 and you never miss again.\n\n👉 {self.PRO_LINK}"
-            return no_results_msg, {'type': 'no_results'}
+        return "What kind of sound are you looking for?", None
 
-        intro = self.personality.format_search_intro(query)
-        return intro, {'type': 'search_results', 'results': results}
+    def _search_samples(self, query: str) -> Tuple[str, Optional[dict]]:
+        """Search for samples in the library."""
+        if not self.sample_db.is_available():
+            return ("Sample library isn't set up yet. But I can generate something fresh for you!\n"
+                    "Try: 'make dark trap drums' or 'create lo-fi melody'"), None
 
-    def _play_by_index(self, index: int) -> Tuple[str, Optional[dict]]:
-        """Play a sample by its index in last search results."""
-        if not self.context.last_search_results:
-            return "No search results to play from. Search for something first!", None
+        samples = self.sample_db.search(query, limit=8)
 
-        if index < 1 or index > len(self.context.last_search_results):
-            return f"Pick a number between 1 and {len(self.context.last_search_results)}", None
+        if not samples:
+            # Suggest generation instead
+            return (f"No samples matching '{query}' in the library.\n\n"
+                    f"Want me to generate something? Try: 'make {query}'"), None
 
-        result = self.context.last_search_results[index - 1]
-        filepath = result.sample.filepath
+        self.context.last_samples = samples
+        return self._format_sample_list(samples, f"Found some '{query}' samples:"), {
+            'type': 'samples',
+            'samples': samples
+        }
 
-        if self.player.play(filepath):
-            self.context.last_played = filepath
-            return f"Playing: {result.sample.filename}", {'type': 'playing', 'file': filepath}
-        else:
-            return f"Couldn't play that file. Make sure it exists.", None
+    def _get_category_samples(self, category: str) -> Tuple[str, Optional[dict]]:
+        """Get samples by category."""
+        if not self.sample_db.is_available():
+            return (f"Sample library isn't set up yet. Want me to generate some {category}s?\n"
+                    f"Try: 'make {category}'"), None
 
-    def _play_file(self, filepath: str) -> Tuple[str, Optional[dict]]:
-        """Play a file directly."""
-        if self.player.play(filepath):
-            self.context.last_played = filepath
-            return f"Playing...", {'type': 'playing', 'file': filepath}
-        return "Couldn't play that file.", None
+        samples = self.sample_db.get_by_category(category, limit=8)
 
-    def _do_generate(self, prompt: str) -> Tuple[str, Optional[dict]]:
-        """Generate a new sample."""
-        if not self.tier_manager.can_generate():
-            sales_msg = f"""Yo I WANT to hook you up with that '{prompt}' but that's PRO territory, little bro!
+        if not samples:
+            return f"No {category}s in the library yet. Want me to generate one?", None
 
-🔥 PRO gets you:
-• GPU-SYNTHESIZED LOOPS - Full beats from scratch
-• UNLIMITED generations - Create all day
-• STUDIO QUALITY - Premium AI models
-• DRUMS, BASS, MELODIES - Complete instrumentals
-
-Real talk, $20/month is cheaper than ONE sample pack. Studios charge $500/hour for less. You serious about this music thing or nah?
-
-Stop playing and level up 👉 {self.PRO_LINK}"""
-            return sales_msg, {'type': 'upgrade_required'}
-
-        if not self.generator.is_available():
-            return "Set your REPLICATE_API_TOKEN to enable generation.", {'type': 'config_required'}
-
-        intro = self.personality.format_generate_intro(prompt)
-        result = self.generator.generate(prompt)
-
-        if result.success:
-            self.context.last_generated = result.filepath
-            self.tier_manager.use_generation()
-            return f"{intro}\n\nDone! Saved to: {result.filepath}", {'type': 'generated', 'file': result.filepath}
-        else:
-            return f"Generation failed: {result.error}", {'type': 'error'}
+        self.context.last_samples = samples
+        return self._format_sample_list(samples, f"Here's some {category}s from the library:"), {
+            'type': 'samples',
+            'samples': samples
+        }
 
     def _get_random_samples(self) -> Tuple[str, Optional[dict]]:
         """Get random samples for inspiration."""
-        samples = self.search.get_random_samples(5)
+        if not self.sample_db.is_available():
+            return "Sample library isn't connected. Let me generate something for you instead!", None
+
+        samples = self.sample_db.get_random(limit=5)
+
         if not samples:
-            return "Your sample library is empty. Scan a folder first!", None
+            return "Library is empty. Want me to generate something?", None
 
-        # Convert to search results format
-        self.context.last_search_results = [
-            SearchResult(sample=s, score=1.0, match_reasons=['random pick'])
-            for s in samples
-        ]
+        self.context.last_samples = samples
+        return self._format_sample_list(samples, "Here's some random heat for inspiration:"), {
+            'type': 'samples',
+            'samples': samples
+        }
 
-        return "Here's some random heat from your stash:", {'type': 'search_results', 'results': self.context.last_search_results}
+    def _play_sample(self, index: int) -> Tuple[str, Optional[dict]]:
+        """Get playback URL for a sample."""
+        if not self.context.last_samples:
+            return "No samples to play. Search for something first!", None
+
+        if index < 1 or index > len(self.context.last_samples):
+            return f"Pick a number between 1 and {len(self.context.last_samples)}", None
+
+        sample = self.context.last_samples[index - 1]
+        return f"**{sample.name}** ({sample.category})\n\nListen: {sample.file_url}", {
+            'type': 'play_sample',
+            'sample': sample,
+            'url': sample.file_url
+        }
+
+    def _format_sample_list(self, samples: List[Sample], intro: str) -> str:
+        """Format a list of samples for display."""
+        lines = [intro, ""]
+
+        for i, sample in enumerate(samples, 1):
+            tags_str = ', '.join(sample.tags[:2]) if sample.tags else ''
+            tag_display = f" [{tags_str}]" if tags_str else ''
+            lines.append(f"{i}. **{sample.name}** ({sample.category}){tag_display}")
+
+        lines.append("")
+        lines.append("Type a number to preview, or describe what else you need.")
+
+        return '\n'.join(lines)
+
+    def _show_generation_options(self) -> Tuple[str, Optional[dict]]:
+        """Show available generation options."""
+        moods = ", ".join(SoundrawGenerator.get_available_moods()[:10])
+        genres = ", ".join(SoundrawGenerator.get_available_genres()[:10])
+
+        msg = f"""Here's what you can create:
+
+**Moods:** {moods}...
+**Genres:** {genres}...
+**Energy:** Very Low, Low, Medium, High, Very High
+
+Try: 'make dark trap high energy' or 'create chill lo-fi peaceful'
+
+**Sample categories:** kicks, snares, hats, 808s, claps, bass, percs"""
+
+        return msg, {'type': 'help'}
+
+    def _do_generate(self, prompt: str) -> Tuple[str, Optional[dict]]:
+        """Generate a new track."""
+        # Check if user can generate
+        if not self.tier_manager.can_generate():
+            return self.personality.format_daily_limit_reached(), {'type': 'limit_reached'}
+
+        # Check if API is configured
+        if not self.generator.is_available():
+            return ("I need the Soundraw API to create tracks.\n\n"
+                    "Set up your key:\n"
+                    "1. Get one at soundraw.io\n"
+                    "2. Run: export SOUNDRAW_API_TOKEN=your_key"), {'type': 'config_required'}
+
+        # Get max duration based on tier
+        max_duration = self.tier_manager.get_max_duration()
+
+        intro = self.personality.format_generate_intro(prompt)
+        result = self.generator.generate(prompt, duration=max_duration)
+
+        if result.success:
+            self.context.last_generated = result.filepath
+            self.context.generation_count += 1
+            self.tier_manager.use_generation()
+
+            remaining = self.tier_manager.get_remaining_generations()
+            success_msg = self.personality.format_generation_success(
+                result.filepath,
+                mood=result.mood,
+                genre=result.genre
+            )
+
+            # Suggest related samples if available
+            if self.sample_db.is_available():
+                related = self.sample_db.recommend_for_prompt(prompt, limit=5)
+                if related:
+                    self.context.last_samples = related
+                    
+                    # Group samples by category for better recommendations
+                    samples_by_category = {}
+                    for sample in related:
+                        cat = sample.category
+                        if cat not in samples_by_category:
+                            samples_by_category[cat] = []
+                        samples_by_category[cat].append(sample)
+                    
+                    # Build recommendation message
+                    if samples_by_category:
+                        success_msg += "\n\n[bold]Related samples from library:[/bold]"
+                        for category, samples in list(samples_by_category.items())[:3]:  # Show top 3 categories
+                            sample_list = ', '.join([s.name for s in samples[:2]])
+                            success_msg += f"\n• {category}: {sample_list}"
+                        success_msg += "\n\nType 'play 1' to preview the first sample, or 'samples' to search for more."
+
+            if remaining > 0:
+                success_msg += f"\n\n({remaining} generations left today)"
+            elif remaining == 0:
+                success_msg += "\n\n(That was your last one for today!)"
+
+            return f"{intro}\n\n{success_msg}", {
+                'type': 'generated',
+                'file': result.filepath,
+                'mood': result.mood,
+                'genre': result.genre
+            }
+        else:
+            tip = self.personality.format_generation_tip()
+            return f"Couldn't create that one: {result.error}\n\n{tip}", {'type': 'error'}
 
     def _simple_chat(self, message: str) -> Tuple[str, Optional[dict]]:
-        """Simple pattern-matching fallback chat."""
+        """Simple pattern-matching fallback."""
         message_lower = message.lower()
 
         # Greetings
         if any(w in message_lower for w in ['hi', 'hello', 'hey', 'yo', 'sup', "what's up"]):
             return self.personality.get_greeting(), None
 
+        # Creation requests - try to generate
+        create_keywords = ['make', 'create', 'generate', 'need', 'want', 'give me', 'i need']
+        if any(kw in message_lower for kw in create_keywords):
+            return self._do_generate(message)
+
         # Sample requests
-        sample_keywords = ['sample', 'sound', 'need', 'want', 'looking for', 'find', 'get']
+        sample_keywords = ['sample', 'find', 'got any', 'have any']
         if any(kw in message_lower for kw in sample_keywords):
-            # Extract what they're looking for
-            return self._do_search(message)
+            return self._search_samples(message)
+
+        # Questions about production
+        if '?' in message or any(w in message_lower for w in ['how do', 'how to', 'what is', 'why']):
+            return self._get_production_advice(message)
 
         # Default
-        return ("Tell me what kind of sound you're hunting for, or type 'search [description]' "
-                "to dig through your samples."), None
+        has_samples = self.sample_db.is_available()
+        sample_hint = "\n- Type 'kicks', 'snares', '808s' to browse samples" if has_samples else ""
+
+        return (f"Tell me what you want to create! Try:{sample_hint}\n"
+                "- 'make dark trap drums'\n"
+                "- 'create chill lo-fi melody'\n\n"
+                "Or ask me anything about production!"), None
+
+    def _get_production_advice(self, question: str) -> Tuple[str, Optional[dict]]:
+        """Get production advice using LLM or fallback."""
+        client = self._get_llm_client()
+        if client:
+            return self._chat_with_llm(question)
+
+        # Fallback advice
+        advice = [
+            "That's a great question. The key is to trust your ears - if it sounds good, it is good.",
+            "Every producer finds their own way. Experiment, make mistakes, and learn from them.",
+            "Start simple. The best beats often have the least going on.",
+        ]
+        import random
+        return random.choice(advice), None
 
     def _chat_with_llm(self, message: str) -> Tuple[str, Optional[dict]]:
-        """Chat using OpenAI for more natural conversation."""
+        """Chat using LLM for natural conversation and advice."""
         client = self._get_llm_client()
         if not client:
             return self._simple_chat(message)
 
-        # Build context about available samples
-        sample_count = self.scanner.get_sample_count()
-        categories = self.search.get_categories()
-        cat_str = ", ".join(f"{cat}: {count}" for cat, count in categories.items())
+        remaining = self.tier_manager.get_remaining_generations()
+        can_generate = self.generator.is_available()
+        has_samples = self.sample_db.is_available()
+
+        # Get sample categories if available
+        categories_info = ""
+        if has_samples:
+            cats = self.sample_db.get_categories()
+            if cats:
+                categories_info = f"\nSample library: {', '.join(f'{k}: {v}' for k, v in list(cats.items())[:5])}"
 
         system_context = f"""
 {self.personality.system_prompt}
 
-CURRENT LIBRARY STATUS:
-- Total samples indexed: {sample_count}
-- Categories: {cat_str}
+CURRENT STATUS:
 - User tier: {self.tier_manager.tier.value}
-- Generation available: {self.tier_manager.can_generate()}
+- Generations remaining today: {remaining if remaining >= 0 else 'unlimited'}
+- Generation available: {can_generate}
+- Sample library available: {has_samples}{categories_info}
 
-Remember to output actions in [ACTION:TYPE:params] format when needed.
+CAPABILITIES:
+- Generate music: [ACTION:GENERATE:description]
+- Search samples: [ACTION:SEARCH:query]
+- Get category: [ACTION:CATEGORY:kick/snare/hat/808/clap]
+
+Give genuine production advice when asked. Be helpful, not salesy.
 """
 
         try:
-            # Use DeepSeek model if using DeepSeek, else GPT-4o-mini
             model = self.DEEPSEEK_MODEL if self.deepseek_api_key else "gpt-4o-mini"
 
             response = client.chat.completions.create(
@@ -346,7 +433,7 @@ Remember to output actions in [ACTION:TYPE:params] format when needed.
                     {"role": "system", "content": system_context},
                     {"role": "user", "content": message}
                 ],
-                max_tokens=150,  # Keep responses short to save API costs
+                max_tokens=250,
                 temperature=0.8
             )
 
@@ -355,19 +442,19 @@ Remember to output actions in [ACTION:TYPE:params] format when needed.
             # Parse any actions from the response
             action = self._parse_action_from_response(reply)
             if action:
-                # Remove action tag from display text
                 reply = re.sub(r'\[ACTION:[^\]]+\]', '', reply).strip()
                 action_response, action_data = self._execute_action(action)
-                return f"{reply}\n\n{action_response}", action_data
+                if reply:
+                    return f"{reply}\n\n{action_response}", action_data
+                return action_response, action_data
 
             return reply, None
 
-        except Exception as e:
+        except Exception:
             return self._simple_chat(message)
 
     def _parse_action_from_response(self, response: str) -> Optional[dict]:
         """Parse action tags from LLM response."""
-        # Match [ACTION:TYPE:params]
         match = re.search(r'\[ACTION:(\w+):([^\]]*)\]', response)
         if not match:
             return None
@@ -375,22 +462,21 @@ Remember to output actions in [ACTION:TYPE:params] format when needed.
         action_type = match.group(1).lower()
         params = match.group(2)
 
-        if action_type == 'search':
-            return {'action': 'search', 'query': params}
-        elif action_type == 'play':
-            if params.isdigit():
-                return {'action': 'play_index', 'index': int(params)}
-            return {'action': 'play_file', 'file': params}
-        elif action_type == 'generate':
+        if action_type == 'generate':
             return {'action': 'generate', 'prompt': params}
+        elif action_type == 'search':
+            return {'action': 'search_samples', 'query': params}
+        elif action_type == 'category':
+            return {'action': 'category_samples', 'category': params}
 
         return None
 
     def get_stats(self) -> dict:
         """Get current session stats."""
         return {
-            'samples_indexed': self.scanner.get_sample_count(),
             'tier': self.tier_manager.tier.value,
             'can_generate': self.tier_manager.can_generate(),
-            'categories': self.search.get_categories(),
+            'remaining_generations': self.tier_manager.get_remaining_generations(),
+            'generations_this_session': self.context.generation_count,
+            'sample_library': self.sample_db.is_available(),
         }

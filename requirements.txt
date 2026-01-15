@@ -4,21 +4,15 @@
 typer>=0.9.0
 rich>=13.0.0
 
-# Audio Processing
-librosa>=0.10.0
-soundfile>=0.12.0
-numpy>=1.24.0
+# AI Music Generation (Soundraw API)
+requests>=2.28.0
 
-# AI Generation
-replicate>=0.15.0
+# Sample Library (Supabase)
+supabase>=2.0.0
 
 # LLM for Chatbot
 openai>=1.0.0
 
 # Utilities
 pyyaml>=6.0
-pydantic>=2.0.0
 python-dotenv>=1.0.0
-
-# Audio playback
-pygame>=2.5.0

@@ -94,8 +94,8 @@ echo ""
 echo "Or scan your own samples:"
 echo "  beat-sensei scan ~/Music/Samples"
 echo ""
-echo "For AI generation (Pro), set your API key:"
-echo "  export REPLICATE_API_TOKEN=your_token_here"
+echo "For AI generation, set your API key:"
+echo "  export SOUNDRAW_API_TOKEN=your_soundraw_key"
 echo ""
 
 # Ask if user wants to download samples now

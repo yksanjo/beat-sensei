@@ -1,53 +1,54 @@
-"""Download free sample packs for Beat-Sensei."""
+"""Sample manager for Beat-Sensei with multiple sources."""
 
 import os
+import shutil
 import zipfile
 import urllib.request
+import tempfile
 from pathlib import Path
 from typing import Optional, Callable
 
-# Free sample pack sources (Creative Commons / Royalty-Free)
+# Sample packs configuration
 SAMPLE_PACKS = {
     "starter": {
         "name": "Beat-Sensei Starter Pack",
-        "description": "Essential drums, bass, and loops to get started",
-        "url": "https://freesound.org/apiv2/packs/31830/download/",  # Example pack
-        "size": "~50MB",
-        "fallback_samples": [
-            # Individual free samples from Freesound (CC0)
-            ("kick_punchy.wav", "https://freesound.org/data/previews/171/171104_2394245-lq.mp3"),
-            ("snare_crisp.wav", "https://freesound.org/data/previews/387/387186_7255534-lq.mp3"),
+        "description": "Essential free samples to get started",
+        "type": "free",
+        "urls": [
+            # Free samples from Freesound (CC0 license)
+            ("kick_808.wav", "https://freesound.org/data/previews/145/145628_2607098-lq.mp3"),
+            ("snare_trap.wav", "https://freesound.org/data/previews/387/387186_7255534-lq.mp3"),
             ("hihat_closed.wav", "https://freesound.org/data/previews/250/250551_4486188-lq.mp3"),
-            ("808_sub.wav", "https://freesound.org/data/previews/145/145628_2607098-lq.mp3"),
+            ("clap_fat.wav", "https://freesound.org/data/previews/183/183102_2394245-lq.mp3"),
+            ("bass_808.wav", "https://freesound.org/data/previews/145/145630_2607098-lq.mp3"),
         ]
     },
     "drums": {
-        "name": "Drum Kit Essentials",
-        "description": "Kicks, snares, hats, and percussion",
+        "name": "Free Drum Kit",
+        "description": "Basic drum sounds",
+        "type": "free",
         "urls": [
-            ("kick_deep.wav", "https://freesound.org/data/previews/344/344759_3905081-lq.mp3"),
-            ("kick_trap.wav", "https://freesound.org/data/previews/170/170140_2394245-lq.mp3"),
-            ("snare_acoustic.wav", "https://freesound.org/data/previews/495/495005_10748568-lq.mp3"),
-            ("snare_trap.wav", "https://freesound.org/data/previews/387/387186_7255534-lq.mp3"),
-            ("hihat_closed.wav", "https://freesound.org/data/previews/250/250551_4486188-lq.mp3"),
-            ("hihat_open.wav", "https://freesound.org/data/previews/213/213148_93965-lq.mp3"),
-            ("clap_fat.wav", "https://freesound.org/data/previews/183/183102_2394245-lq.mp3"),
-            ("rim_shot.wav", "https://freesound.org/data/previews/62/62485_763389-lq.mp3"),
+            ("kick1.wav", "https://freesound.org/data/previews/344/344759_3905081-lq.mp3"),
+            ("kick2.wav", "https://freesound.org/data/previews/170/170140_2394245-lq.mp3"),
+            ("snare1.wav", "https://freesound.org/data/previews/495/495005_10748568-lq.mp3"),
+            ("hihat1.wav", "https://freesound.org/data/previews/250/250551_4486188-lq.mp3"),
+            ("hihat2.wav", "https://freesound.org/data/previews/213/213148_93965-lq.mp3"),
         ]
     },
     "bass": {
-        "name": "808s & Bass",
-        "description": "Sub bass, 808s, and bass hits",
+        "name": "Free Bass Pack",
+        "description": "808s and bass sounds",
+        "type": "free",
         "urls": [
-            ("808_long.wav", "https://freesound.org/data/previews/145/145628_2607098-lq.mp3"),
-            ("808_short.wav", "https://freesound.org/data/previews/145/145630_2607098-lq.mp3"),
+            ("808_1.wav", "https://freesound.org/data/previews/145/145628_2607098-lq.mp3"),
+            ("808_2.wav", "https://freesound.org/data/previews/145/145630_2607098-lq.mp3"),
             ("bass_synth.wav", "https://freesound.org/data/previews/110/110393_1537325-lq.mp3"),
-            ("sub_drop.wav", "https://freesound.org/data/previews/243/243701_4284968-lq.mp3"),
+            ("sub_bass.wav", "https://freesound.org/data/previews/243/243701_4284968-lq.mp3"),
         ]
-    },
+    }
 }
 
-# Links to external free sample resources
+# Free sample resources
 FREE_SAMPLE_RESOURCES = [
     {
         "name": "Freesound.org",
@@ -67,12 +68,7 @@ FREE_SAMPLE_RESOURCES = [
     {
         "name": "99sounds",
         "url": "https://99sounds.org",
-        "description": "High-quality free sound effects and samples",
-    },
-    {
-        "name": "SampleSwap",
-        "url": "https://sampleswap.org",
-        "description": "Community-driven sample sharing",
+        "description": "High-quality free sound effects",
     },
     {
         "name": "Bedroom Producers Blog",
@@ -80,6 +76,9 @@ FREE_SAMPLE_RESOURCES = [
         "description": "Curated free sample packs",
     },
 ]
+
+# FREE_SAMPLE_RESOURCES is already defined above (lines 43-77)
+# No need for IS_DEVELOPER check anymore
 
 
 class SampleDownloader:
@@ -93,9 +92,9 @@ class SampleDownloader:
         pack_name: str,
         progress_callback: Optional[Callable[[str, int, int], None]] = None
     ) -> tuple[bool, str, list[str]]:
-        """Download a sample pack.
+        """Download free sample pack.
 
-        Returns: (success, message, list of downloaded files)
+        Returns: (success, message, list of files)
         """
         if pack_name not in SAMPLE_PACKS:
             return False, f"Unknown pack: {pack_name}", []
@@ -105,7 +104,7 @@ class SampleDownloader:
         pack_dir.mkdir(parents=True, exist_ok=True)
 
         downloaded = []
-        urls = pack.get("urls", pack.get("fallback_samples", []))
+        urls = pack.get("urls", [])
 
         for i, (filename, url) in enumerate(urls):
             if progress_callback:
@@ -128,15 +127,15 @@ class SampleDownloader:
         self,
         progress_callback: Optional[Callable[[str, int, int], None]] = None
     ) -> tuple[int, list[str]]:
-        """Download all available sample packs."""
-        total_downloaded = []
+        """Copy all available sample packs from local source."""
+        total_copied = []
 
         for pack_name in SAMPLE_PACKS:
             success, msg, files = self.download_pack(pack_name, progress_callback)
             if success:
-                total_downloaded.extend(files)
+                total_copied.extend(files)
 
-        return len(total_downloaded), total_downloaded
+        return len(total_copied), total_copied
 
     def list_packs(self) -> list[dict]:
         """List available sample packs."""
@@ -145,6 +144,8 @@ class SampleDownloader:
                 "id": pack_id,
                 "name": pack["name"],
                 "description": pack["description"],
+                "type": pack.get("type", "free"),
+                "file_count": len(pack.get("urls", [])),
             }
             for pack_id, pack in SAMPLE_PACKS.items()
         ]

@@ -3,7 +3,7 @@
 [![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-Your AI Sample Master - A terminal chatbot for beat production.
+Your AI Music Production Mentor - Create original tracks, browse curated samples, and level up your skills.
 
 ```
  ____  _____    _  _____   ____  _____ _   _ ____  _____ ___
@@ -13,184 +13,169 @@ Your AI Sample Master - A terminal chatbot for beat production.
 |____/|_____/_/   \_\_|   |____/|_____|_| \_|____/|_____|___|
 ```
 
-Beat-Sensei is a hip-hop producer mentor chatbot that helps you discover samples from your local library and generate new ones using AI.
+## Features
 
-## One-Line Install
+- **AI Music Generation** - Create original tracks with Soundraw AI (5 free/day)
+- **Curated Sample Library** - Browse 1,500+ hand-picked samples (kicks, snares, 808s, etc.)
+- **Production Mentor** - Get real advice from an experienced producer personality
+- **Learn While You Create** - Tips and guidance built into every interaction
 
-```bash
-curl -fsSL https://raw.githubusercontent.com/yksanjo/beat-sensei/main/install.sh | bash
-```
+## Quick Start
 
-Or with pip:
+### Install
+
 ```bash
 pip install git+https://github.com/yksanjo/beat-sensei.git
 ```
 
-## Features
-
-- **Free Sample Packs** - Download starter samples with one command
-- **Smart Sample Search** - Find samples by description ("dusty soul chops", "dark 808 bass")
-- **Audio Preview** - Play samples directly in your terminal
-- **AI Generation** - Create custom samples using MusicGen (Pro tier)
-- **Hip-Hop Mentor** - Get advice from an OG producer personality
-- **Local Library Indexing** - Scan and organize your sample folders
-
-## Quick Start
+### Set Up APIs
 
 ```bash
-# 1. Install
-curl -fsSL https://raw.githubusercontent.com/yksanjo/beat-sensei/main/install.sh | bash
+# For AI generation (get key at soundraw.io)
+export SOUNDRAW_API_TOKEN=your_soundraw_key
 
-# 2. Download free sample packs
-beat-sensei download all
+# For sample library (optional - get free account at supabase.com)
+export SUPABASE_URL=your_project_url
+export SUPABASE_ANON_KEY=your_anon_key
+```
 
-# 3. Start chatting!
+### Start Creating
+
+```bash
 beat-sensei
 ```
 
-## Get Samples
+## Usage
 
-### Download Built-in Packs
-```bash
-beat-sensei download              # List available packs
-beat-sensei download starter      # Download starter pack
-beat-sensei download drums        # Download drum kit
-beat-sensei download bass         # Download 808s & bass
-beat-sensei download all          # Download everything
-```
-
-### Scan Your Own Samples
-```bash
-beat-sensei scan ~/Music/Samples
-beat-sensei scan ~/Downloads/SamplePacks
-```
-
-### Free Sample Resources
-```bash
-beat-sensei download --resources  # Show list of free sample sites
-```
-
-Sites with free samples:
-- [Freesound.org](https://freesound.org) - 500,000+ Creative Commons samples
-- [Splice Free](https://splice.com/features/free-samples) - Free packs from Splice
-- [Cymatics](https://cymatics.fm/pages/free-download-vault) - Free sample packs
-- [99sounds](https://99sounds.org) - High-quality free sounds
-- [Bedroom Producers Blog](https://bedroomproducersblog.com/free-samples/) - Curated packs
-
-## Commands
-
-### Interactive Mode
-
-```bash
-beat-sensei              # Start chat
-beat-sensei --scan <folder>  # Scan folder before starting
-```
-
-### Quick Commands
-
-```bash
-beat-sensei scan <folder>     # Index a sample folder
-beat-sensei search "query"    # Quick search
-beat-sensei play <file>       # Play a file
-beat-sensei generate "desc"   # Generate sample (Pro)
-beat-sensei config            # View configuration
-```
-
-### In-Chat Commands
-
-| Command | Description |
-|---------|-------------|
-| `search <query>` | Search for samples |
-| `play <number>` | Play from search results |
-| `stop` | Stop playback |
-| `generate <desc>` | Generate new sample (Pro) |
-| `random` | Get random inspiration |
-| `help` | Show help |
-| `quit` | Exit |
-
-## Configuration
-
-Configuration is stored in `config/config.yaml`:
-
-```yaml
-sample_folders:
-  - /Users/you/Downloads/beat sensei
-
-output_folder: ~/Music/BeatSensei/Generated
-
-preferences:
-  default_bpm: 90
-  audio_format: wav
-```
-
-## Environment Variables
-
-For AI features, set these in your shell or `.env` file:
-
-```bash
-# For AI sample generation (Pro)
-export REPLICATE_API_TOKEN=your_token_here
-
-# For enhanced chatbot (optional)
-export OPENAI_API_KEY=your_key_here
-```
-
-## Tiers
-
-### Free
-- Unlimited local sample search
-- Audio preview
-- Sample analysis
-
-### Pro ($19/month)
-- AI-powered sample generation
-- 100 generations/month
-- Commercial licensing
-
-## Sample Organization
-
-Beat-Sensei auto-categorizes samples:
-- **drums** - kicks, snares, hats, percussion
-- **bass** - 808s, sub bass, bass lines
-- **melody** - synths, keys, guitars, leads
-- **vocal** - vocals, chops, choirs
-- **fx** - risers, impacts, transitions
-- **loop** - full loops and beats
-- **sample** - general samples and chops
-
-## Example Session
+### Interactive Chat
 
 ```
 $ beat-sensei
 
- BEAT-SENSEI v1.0
- Your AI Sample Master | Hip-Hop Edition
+Sensei: Yo, what's good! Ready to make some heat today?
 
- Sample Library: 847 samples indexed
- Tier: Free (Search & Preview)
+You: kicks
 
-Sensei: Yo, what's good! Ready to dig through the crates?
+Sensei: Here's some kicks from the library:
 
-You: I need something dusty for a boom bap beat
+1. kick - abyssal (kick) [dark]
+2. kick - boom (kick) [punchy]
+3. kick - classic (kick) [trap]
+...
 
-Sensei: Classic vibes, I respect that. Let me check the stash...
+Type a number to preview, or describe what else you need.
 
-Found Samples:
- # | Filename                    | BPM | Key     | Category
----+-----------------------------+-----+---------+---------
- 1 | soul_chop_dusty_Am.wav      | 92  | A minor | sample
- 2 | vinyl_loop_vintage.wav      | 88  | D minor | loop
- 3 | jazz_piano_warm.wav         | 95  | G major | melody
+You: make dark trap high energy
 
-You: play 1
+Sensei: Aight, cooking up 'dark trap high energy' for you...
 
-Sensei: Let's hear what we got...
-Now playing: soul_chop_dusty_Am.wav
+Done! Your track (Dark, Hip Hop) is ready.
 
-You: that's fire! generate something similar but darker
+Related samples: 808 - Grime, snare - plugg, hat - tick
+(type 'play 1' to preview)
 
-Sensei: Bet, firing up the AI...
-Done! Saved to: ~/Music/BeatSensei/Generated/dark_soul_Am_001.wav
+(4 generations left today)
+```
+
+### Commands
+
+| Command | Description |
+|---------|-------------|
+| `make <description>` | Generate a track (5 free/day) |
+| `kicks` / `snares` / `808s` / `hats` | Browse samples by category |
+| `search <query>` | Search sample library |
+| `play <number>` | Preview a sample |
+| `random` | Get random samples |
+| `options` | See moods/genres |
+| `help` | Show help |
+| `download <pack>` | Download sample packs |
+| `scan <directory>` | Scan directory for samples |
+
+### CLI Commands
+
+```bash
+beat-sensei                           # Start interactive chat
+beat-sensei generate "dark trap"      # Quick generate track
+beat-sensei options                   # See generation options
+beat-sensei config                    # View settings and status
+beat-sensei library                   # Check sample library status
+beat-sensei samples "kick"            # Search sample library
+beat-sensei download all              # Download free sample packs
+beat-sensei scan ~/Music/Samples      # Scan directory for audio samples
+```
+
+## Sample Library
+
+Curated collection of 1,500+ production-ready samples:
+
+- **Kicks** - Punchy, boomy, trap, acoustic
+- **Snares** - Crispy, rimshots, layered
+- **808s** - Heavy subs, distorted, clean
+- **Hats** - Open, closed, shakers
+- **Claps** - Layered, snappy, reverb
+- **Percs** - Shakers, toms, fx
+
+All samples are hand-picked and tagged by mood (dark, hard, soft, trap, classic, etc.)
+
+## Tiers
+
+### Free
+- 5 AI generations per day
+- 30-second tracks
+- Full sample library access
+- Production advice
+
+### Pro ($20/month)
+- 50 generations per day
+- 5-minute tracks
+- Priority support
+
+## Environment Variables
+
+```bash
+# Required for AI generation
+export SOUNDRAW_API_TOKEN=your_key
+
+# Required for sample library
+export SUPABASE_URL=your_project_url
+export SUPABASE_ANON_KEY=your_anon_key
+
+# Optional (uses built-in by default)
+export DEEPSEEK_API_KEY=your_key
+```
+
+## Admin: Upload Samples
+
+To upload your curated samples to Supabase:
+
+```bash
+# Set service key (not anon key)
+export SUPABASE_SERVICE_KEY=your_service_key
+
+# Run upload script
+python scripts/upload_samples.py /path/to/samples --dry-run  # Preview
+python scripts/upload_samples.py /path/to/samples            # Upload
+```
+
+## Database Schema
+
+Run this SQL in your Supabase dashboard:
+
+```sql
+-- See beat_sensei/database/supabase_client.py for full schema
+CREATE TABLE samples (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    name TEXT NOT NULL,
+    category TEXT NOT NULL,
+    pack_name TEXT NOT NULL,
+    file_url TEXT NOT NULL,
+    tags TEXT[] DEFAULT '{}',
+    bpm INTEGER,
+    key TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Create storage bucket: "samples" (public)
 ```
 
 ## License

@@ -1,8 +1,10 @@
+# Beat-Sensei Configuration
+# Add your sample folders here, or use 'beat-sensei scan <folder>'
+
 license_key: null
-output_folder: /Users/yoshikondo/Downloads/beat sensei/generated
+output_folder: ~/Music/BeatSensei/Generated
 preferences:
   audio_format: wav
   default_bpm: 90
-sample_folders:
-- /Users/yoshikondo/Downloads/beat sensei
+sample_folders: []
 tier: free
