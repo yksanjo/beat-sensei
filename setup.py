@@ -20,7 +20,6 @@ setup(
         "pyyaml>=6.0",
         "pydantic>=2.0.0",
         "python-dotenv>=1.0.0",
-        "requests>=2.28.0",
         "supabase>=2.0.0",
         "openai>=1.0.0",
     ],

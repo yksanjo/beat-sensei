@@ -17,7 +17,9 @@ import mimetypes
 
 
 # Sample categories based on folder/filename
+# Priority: loop category first (for sample_loop folder)
 CATEGORY_KEYWORDS = {
+    'loop': ['loop', 'loops', 'sample_loop', 'sample loop', 'sample-loop', 'melody', 'chord', 'progression', 'phrase'],
     'kick': ['kick', 'kicks', 'kik'],
     'snare': ['snare', 'snares', 'snr', 'rim'],
     'hat': ['hat', 'hats', 'hihat', 'hi-hat', 'hh', 'open hat', 'closed hat'],
@@ -26,17 +28,18 @@ CATEGORY_KEYWORDS = {
     'bass': ['bass', 'basses'],
     'perc': ['perc', 'percussion', 'shaker', 'tambourine', 'conga', 'bongo'],
     'fx': ['fx', 'sfx', 'effect', 'riser', 'impact', 'transition'],
-    'melody': ['melody', 'melodies', 'synth', 'keys', 'piano', 'guitar', 'lead'],
-    'loop': ['loop', 'loops', 'beat'],
     'vocal': ['vocal', 'vocals', 'vox', 'voice'],
 }
 
 # Mood/style tags based on filename
 MOOD_KEYWORDS = {
-    'dark': ['dark', 'evil', 'sinister', 'grim', 'horror'],
+    'dark': ['dark', 'evil', 'sinister', 'grim', 'horror', 'moody'],
     'hard': ['hard', 'aggressive', 'heavy', 'loud', 'distorted'],
-    'soft': ['soft', 'gentle', 'mellow', 'smooth', 'warm'],
+    'soft': ['soft', 'gentle', 'mellow', 'smooth', 'warm', 'chill'],
+    'sexy': ['sexy', 'sensual', 'sultry', 'seductive'],
     'trap': ['trap', 'drill', 'plugg'],
+    'r&b': ['r&b', 'rnb', 'soul', 'neo-soul'],
+    'lo-fi': ['lo-fi', 'lofi', 'vinyl', 'crackle'],
     'classic': ['classic', 'vintage', 'old', 'retro', 'boom', 'bap'],
     'crispy': ['crispy', 'crisp', 'clean', 'sharp'],
     'punchy': ['punchy', 'punch', 'knock', 'hit'],
