@@ -1,18 +1,22 @@
-# Beat-Sensei Dependencies
-
-# Core CLI
-typer>=0.9.0
-rich>=13.0.0
-
-# AI Music Generation (Soundraw API)
-requests>=2.28.0
-
-# Sample Library (Supabase)
-supabase>=2.0.0
-
-# LLM for Chatbot
-openai>=1.0.0
-
-# Utilities
-pyyaml>=6.0
+# Beat Sensei - Core Dependencies
+supabase>=2.27.0
 python-dotenv>=1.0.0
+tqdm>=4.65.0
+rich>=13.0.0
+typer>=0.9.0
+requests>=2.31.0
+
+# Audio Processing (optional, for enhanced features)
+librosa>=0.10.0
+soundfile>=0.12.0
+numpy>=1.24.0
+
+# Development & Testing
+pytest>=7.4.0
+black>=23.0.0
+flake8>=6.0.0
+
+# CLI Enhancements
+click>=8.1.0
+prompt-toolkit>=3.0.0
+pygments>=2.15.0
